@@ -119,7 +119,8 @@
 <script type="module">
   const CATEGORY_LABEL = {
     work: "仕事", purchase: "仕入れ・発注", shift: "シフト",
-    promotion: "販促・SNS", home: "家庭", other: "その他",
+    promotion: "販促・SNS", complaint: "クレーム対応", facility: "設備・修繕",
+    hygiene: "衛生・HACCP", training: "教育・研修", home: "家庭", other: "その他",
   };
   const pct = (p) => `${Math.round(p * 100)}%`;
   const el = (id) => document.getElementById(id);
@@ -155,6 +156,16 @@
           <div class="name">優先度</div>
           <div class="row"><span class="verdict">${r.priority.label}</span>
             <span class="conf">レベル ${r.priority.level} ／ 確信度 ${pct(r.priority.confidence)} ${priFlag}</span></div>
+        </div>
+        <div class="metric">
+          <div class="name">期日</div>
+          <div class="row"><span class="verdict">${r.due.date ?? "なし"}</span>
+            <span class="conf">${r.due.rule}</span></div>
+        </div>
+        <div class="metric">
+          <div class="name">進捗</div>
+          <div class="row"><span class="verdict">${r.progress.label}</span>
+            <span class="conf">確信度 ${pct(r.progress.confidence)} ${r.progress.needsReview ? '<span class="flag">⚠ 要確認</span>' : ""}</span></div>
         </div>
         <div class="metric">
           <div class="name">分割要否</div>

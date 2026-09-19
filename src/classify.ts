@@ -2,9 +2,12 @@ import type { TypeSafeClient } from "@typesafe-ai/sdk";
 import {
   CATEGORY_LABEL,
   PRIORITY_LABEL,
+  PROGRESS_LABEL,
   TASK_QUESTIONS,
   type CategoryKey,
+  type ProgressKey,
 } from "./questions";
+import { estimateDueDate, type DueEstimate } from "./duedate";
 
 /** タスクの入力。title は必須、notes は補足メモ（任意）。 */
 export interface TaskInput {
@@ -48,12 +51,24 @@ export interface BreakdownVerdict {
   uncertain: boolean;
 }
 
+/** O4：メモ等から抽出したタスクの進捗状態。 */
+export interface ProgressVerdict {
+  key: ProgressKey;
+  label: string;
+  confidence: number;
+  needsReview: boolean;
+}
+
 export interface Classification {
   input: TaskInput;
   model: string;
   category: CategoryVerdict;
   priority: PriorityVerdict;
+  /** O2：優先度から計算した具体的な期日（JST）。 */
+  due: DueEstimate;
   breakdown: BreakdownVerdict;
+  /** O4：進捗状態の判断。 */
+  progress: ProgressVerdict;
   /** いずれかの判断が人間レビュー行きなら true。 */
   needsHumanReview: boolean;
   usage: { input_tokens: number; output_tokens: number };
@@ -75,6 +90,7 @@ function clampLevel(score: number, levels: number): number {
 export async function classifyTask(
   client: TypeSafeClient,
   input: TaskInput,
+  baseDate: Date = new Date(),
 ): Promise<Classification> {
   // state には構造化した JSON を渡す（テキストでも可だが、項目が分かれる方が明確）。
   const state = {
@@ -106,6 +122,9 @@ export async function classifyTask(
     needsReview: answers.priority.confidence < CONFIDENCE_THRESHOLD,
   };
 
+  // O2：緊急度レベルから具体的な期日をコード側で計算（JST）。
+  const due = estimateDueDate(level, baseDate);
+
   const p = answers.needsBreakdown.noul;
   const [lo, hi] = NOUL_UNCERTAIN_BAND;
   const breakdown: BreakdownVerdict = {
@@ -114,15 +133,29 @@ export async function classifyTask(
     uncertain: p > lo && p < hi,
   };
 
+  // O4：進捗状態の抽出。
+  const progressKey = answers.progress.choice as ProgressKey;
+  const progress: ProgressVerdict = {
+    key: progressKey,
+    label: PROGRESS_LABEL[progressKey] ?? progressKey,
+    confidence: answers.progress.confidence,
+    needsReview: answers.progress.confidence < CONFIDENCE_THRESHOLD,
+  };
+
   const needsHumanReview =
-    category.needsReview || priority.needsReview || breakdown.uncertain;
+    category.needsReview ||
+    priority.needsReview ||
+    breakdown.uncertain ||
+    progress.needsReview;
 
   return {
     input,
     model,
     category,
     priority,
+    due,
     breakdown,
+    progress,
     needsHumanReview,
     usage,
   };

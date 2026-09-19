@@ -41,11 +41,15 @@ function countMatches(text: string, words: string[]): number {
 /** choice 質問への模擬回答を作る。criteria のキー順を尊重する。 */
 function answerChoice(labels: string[], text: string) {
   const hints: Record<string, string[]> = {
-    work: ["接客", "調理", "清掃", "オペレーション", "営業", "レジ", "仕込み"],
+    work: ["接客", "調理", "オペレーション", "営業", "レジ", "仕込み"],
     purchase: ["発注", "仕入", "在庫", "備品", "消耗品", "補充", "納品"],
     shift: ["シフト", "勤怠", "休み", "出勤", "人員", "スタッフ配置"],
     promotion: ["Instagram", "インスタ", "SNS", "投稿", "POP", "販促", "キャンペーン"],
-    home: ["家", "家族", "私用", "プライベート", "買い物", "病院"],
+    complaint: ["クレーム", "苦情", "トラブル", "謝罪", "お詫び", "返金"],
+    facility: ["故障", "修理", "修繕", "メンテ", "空調", "機器", "厨房機器", "点検"],
+    hygiene: ["清掃", "掃除", "衛生", "消毒", "HACCP", "検便", "害虫"],
+    training: ["教育", "研修", "指導", "マニュアル", "トレーニング", "新人"],
+    home: ["家族", "私用", "プライベート", "病院", "自宅"],
     other: [],
   };
   const raw = labels.map((label) => {
@@ -97,7 +101,7 @@ function answerScore(criteria: unknown[], text: string) {
   };
 }
 
-/** noul（yes/no）質問への模擬回答を作る。 */
+/** noul（yes/no）質問への模擬回答を作る（分割要否など）。 */
 function answerNoul(text: string) {
   const separators = countMatches(text, ["、", "および", "＆", "&", "＋", "+", "・", "も", "し、", "ながら", "つつ"]);
   const verbs = countMatches(text, ["する", "作る", "確認", "連絡", "準備", "発注", "投稿", "差し替え", "掃除", "返信"]);
@@ -105,17 +109,68 @@ function answerNoul(text: string) {
   return { type: "noul" as const, noul: Number(raw.toFixed(3)) };
 }
 
+/** progress（進捗）choice への模擬回答。O4。 */
+function answerProgress(labels: string[], text: string) {
+  const score: Record<string, number> = {
+    done: countMatches(text, ["完了", "済", "終わ", "done", "対応済", "できた"]) * 2,
+    blocked: countMatches(text, ["待ち", "保留", "止ま", "ブロック", "依存", "未定", "確認中"]) * 2,
+    in_progress: countMatches(text, ["進行中", "着手", "作業中", "対応中", "作成中", "途中"]) * 2,
+    not_started: 0.5, // 既定は未着手寄り
+  };
+  const raw = labels.map((l) => score[l] ?? 0);
+  const probs = toProbabilities(raw, 2.4);
+  const probabilities: Record<string, number> = {};
+  labels.forEach((l, i) => (probabilities[l] = probs[i]));
+  let best = 0;
+  probs.forEach((p, i) => (best = p > probs[best] ? i : best));
+  return { type: "choice" as const, choice: labels[best], confidence: probs[best], probabilities };
+}
+
+/** 文字バイグラムの Jaccard 類似度（0〜1）。 */
+function bigramSimilarity(a: string, b: string): number {
+  const grams = (s: string) => {
+    const set = new Set<string>();
+    for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+    return set;
+  };
+  const ga = grams(a);
+  const gb = grams(b);
+  if (ga.size === 0 || gb.size === 0) return 0;
+  let inter = 0;
+  for (const g of ga) if (gb.has(g)) inter++;
+  return inter / (ga.size + gb.size - inter);
+}
+
+/** sameTask（重複検知）noul への模擬回答。O3。state の taskA/taskB を比較。 */
+function answerSameTask(rawState: unknown) {
+  const s = (rawState ?? {}) as Record<string, unknown>;
+  const a = typeof s.taskA === "string" ? s.taskA : "";
+  const b = typeof s.taskB === "string" ? s.taskB : "";
+  const sim = bigramSimilarity(a, b);
+  // 類似度を少し強調して yes 確率にする。
+  const noul = Math.min(0.98, Math.max(0, sim * 1.4));
+  return { type: "noul" as const, noul: Number(noul.toFixed(3)) };
+}
+
 const demoFetch: Fetch = async (_input, init) => {
   const body = init?.body ? (JSON.parse(String(init.body)) as Json) : {};
-  const state = normalizeState(body.state);
+  const rawState = body.state;
+  const state = normalizeState(rawState);
   const questions = (body.questions ?? {}) as Record<string, Json>;
 
   const answers: Record<string, unknown> = {};
   for (const [name, q] of Object.entries(questions)) {
     if (q.type === "choice") {
-      answers[name] = answerChoice(Object.keys(q.criteria as Json), state);
+      const labels = Object.keys(q.criteria as Json);
+      // 進捗判定は専用ヒューリスティック、それ以外はカテゴリ辞書で。
+      answers[name] = name === "progress"
+        ? answerProgress(labels, state)
+        : answerChoice(labels, state);
     } else if (q.type === "score") {
       answers[name] = answerScore(q.criteria as unknown[], state);
+    } else if (name === "same") {
+      // 重複検知は state の taskA/taskB を比較する専用ロジック。
+      answers[name] = answerSameTask(rawState);
     } else {
       answers[name] = answerNoul(state);
     }
