@@ -24,6 +24,11 @@
 
 しきい値は `src/classify.ts` の `CONFIDENCE_THRESHOLD` で変更できます。
 
+## 2つの使い方
+
+- **Web版**（ブラウザ）… Vercel にデプロイして使う。APIキーはサーバー側に保持し、ブラウザには渡さない
+- **CLI版**（ターミナル）… ローカルでタスク文を分類する
+
 ## セットアップ
 
 Node.js 20 以上が必要です。
@@ -33,7 +38,19 @@ npm install
 npm run build
 ```
 
-## 使い方
+## Web版（Vercel）
+
+このリポジトリは Vercel にそのままデプロイできます。
+
+- `public/index.html` … 静的フロント（タスク入力フォーム＋結果表示）
+- `api/classify.ts` … サーバーレス関数。`TYPESAFE_API_KEY` がVercelのEnvironment Variablesに
+  設定されていれば**本物のJev判定（live）**、未設定なら**デモ判定（demo）**を返す
+- APIキーはサーバー側の環境変数にのみ保持し、ブラウザには一切露出しない
+
+デプロイ後、トップページのフォームからタスク文を入力すると分類結果が表示されます。
+本番判定を有効にするには、Vercelのプロジェクト設定で `TYPESAFE_API_KEY` を追加してください。
+
+## CLI版の使い方
 
 ### 1. まず試す（demoモード・APIキー不要）
 
@@ -83,10 +100,17 @@ npm run demo -- --json "食材の在庫チェックと発注書の作成"
 ```
 src/
   questions.ts     判断の定義（カテゴリ・優先度・分割の質問プリミティブ）
-  classify.ts      systemOne 呼び出し＋確信度による振り分けロジック（本体）
+  classify.ts      systemOne 呼び出し＋確信度による振り分けロジック（本体・共有）
   demo-client.ts   APIキー不要のデモ用モッククライアント
   cli.ts           コマンドライン入出力
+api/
+  classify.ts      Vercel サーバーレス関数（src のロジックを共有）
+public/
+  index.html       Web版フロント（静的）
+vercel.json        Vercel ビルド設定
 ```
+
+CLI版・Web版とも `src/classify.ts` の `classifyTask()` を共有しています。
 
 判断の中心は `src/classify.ts` の `classifyTask()`。ワークフローの主役はコード側で、
 TypeSafe には「意味の理解が要る部分（分類・優先度づけ・分割判断）」だけを任せています。

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TypeSafe タスク自動分類</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --text: #1a1a1e;
+    --muted: #6b6b76;
+    --border: #e3e3e8;
+    --accent: #4f46e5;
+    --accent-soft: #eef0ff;
+    --bar-bg: #ececf1;
+    --warn: #b45309;
+    --warn-soft: #fff3e0;
+    --ok: #15803d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16161a;
+      --panel: #1f1f26;
+      --text: #ececf1;
+      --muted: #9a9aa6;
+      --border: #33333d;
+      --accent: #8b83ff;
+      --accent-soft: #26264a;
+      --bar-bg: #2c2c36;
+      --warn: #f0b429;
+      --warn-soft: #3a2f14;
+      --ok: #4ade80;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16161a; --panel: #1f1f26; --text: #ececf1; --muted: #9a9aa6;
+    --border: #33333d; --accent: #8b83ff; --accent-soft: #26264a;
+    --bar-bg: #2c2c36; --warn: #f0b429; --warn-soft: #3a2f14; --ok: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: .9rem; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px; margin-bottom: 20px;
+  }
+  label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 6px; }
+  input, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 9px; background: var(--bg); color: var(--text);
+    font-size: 1rem; font-family: inherit; margin-bottom: 14px;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  button {
+    background: var(--accent); color: #fff; border: 0; border-radius: 9px;
+    padding: 11px 20px; font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: progress; }
+  .examples { margin-top: 12px; font-size: .82rem; color: var(--muted); }
+  .examples button {
+    background: var(--accent-soft); color: var(--accent); font-weight: 500;
+    padding: 4px 10px; font-size: .8rem; border-radius: 999px; margin: 3px 4px 0 0;
+  }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .verdict { font-size: 1.05rem; font-weight: 700; }
+  .conf { color: var(--muted); font-size: .85rem; font-weight: 500; }
+  .flag { color: var(--warn); font-size: .8rem; font-weight: 700; }
+  .metric { margin-bottom: 16px; }
+  .metric .name { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .bars { margin-top: 6px; }
+  .barline { display: grid; grid-template-columns: 92px 1fr 44px; align-items: center; gap: 8px; font-size: .82rem; margin: 3px 0; }
+  .track { height: 9px; background: var(--bar-bg); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; background: var(--accent); border-radius: 999px; }
+  .decision { border-radius: 9px; padding: 12px 14px; font-weight: 600; font-size: .95rem; }
+  .decision.review { background: var(--warn-soft); color: var(--warn); }
+  .decision.auto { background: var(--accent-soft); color: var(--ok); }
+  .badge { display: inline-block; font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .err { color: var(--warn); font-size: .9rem; }
+  footer { color: var(--muted); font-size: .78rem; text-align: center; margin-top: 24px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TypeSafe タスク自動分類</h1>
+  <p class="sub">タスク文を入力すると、TypeSafe（System One / Jev）が
+    <strong>カテゴリ・優先度・分割要否</strong>を型付きの判断＋確率で返します。</p>
+
+  <div class="card">
+    <label for="title">タスクのタイトル</label>
+    <input id="title" placeholder="例：明日までに業務用オリーブオイルを発注する" />
+    <label for="notes">補足メモ（任意）</label>
+    <textarea id="notes" placeholder="例：今週の販促用"></textarea>
+    <button id="go">分類する</button>
+    <div class="examples">
+      例をためす：
+      <button class="ex" data-t="今日中に来週のスタッフシフトを確定してLINEで連絡">シフト・緊急</button>
+      <button class="ex" data-t="インスタの新メニュー告知を投稿し、POPも差し替える" data-n="今週の販促">販促・複合</button>
+      <button class="ex" data-t="オリーブオイルとトマト缶が切れそうなので発注">仕入れ</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <footer>
+    <span class="badge" id="modeBadge">demo</span>
+    モデル: <span id="modelName">—</span> ／
+    <a href="https://github.com/norisuke0131/todoapp" target="_blank" rel="noopener">ソース</a>
+  </footer>
+</div>
+
+<script type="module">
+  const CATEGORY_LABEL = {
+    work: "仕事", purchase: "仕入れ・発注", shift: "シフト",
+    promotion: "販促・SNS", home: "家庭", other: "その他",
+  };
+  const pct = (p) => `${Math.round(p * 100)}%`;
+  const el = (id) => document.getElementById(id);
+
+  function render(payload) {
+    const r = payload.result;
+    el("modeBadge").textContent = payload.mode === "live" ? "live" : "demo";
+    el("modelName").textContent = r.model;
+
+    const bars = Object.entries(r.category.probabilities)
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, p]) => `
+        <div class="barline">
+          <span>${CATEGORY_LABEL[key] ?? key}</span>
+          <span class="track"><span class="fill" style="width:${Math.round(p * 100)}%"></span></span>
+          <span>${pct(p)}</span>
+        </div>`).join("");
+
+    const bd = r.breakdown;
+    const bdText = bd.uncertain ? "判断保留（中間帯）" : bd.likely ? "分割推奨" : "分割不要";
+    const catFlag = r.category.needsReview ? '<span class="flag">⚠ 要確認</span>' : "";
+    const priFlag = r.priority.needsReview ? '<span class="flag">⚠ 要確認</span>' : "";
+
+    el("result").innerHTML = `
+      <div class="card">
+        <div class="metric">
+          <div class="name">カテゴリ</div>
+          <div class="row"><span class="verdict">${r.category.label}</span>
+            <span class="conf">確信度 ${pct(r.category.confidence)} ${catFlag}</span></div>
+          <div class="bars">${bars}</div>
+        </div>
+        <div class="metric">
+          <div class="name">優先度</div>
+          <div class="row"><span class="verdict">${r.priority.label}</span>
+            <span class="conf">レベル ${r.priority.level} ／ 確信度 ${pct(r.priority.confidence)} ${priFlag}</span></div>
+        </div>
+        <div class="metric">
+          <div class="name">分割要否</div>
+          <div class="row"><span class="verdict">${bdText}</span>
+            <span class="conf">Yes確率 ${pct(bd.probability)}</span></div>
+        </div>
+        <div class="decision ${r.needsHumanReview ? "review" : "auto"}">
+          ${r.needsHumanReview
+            ? "→ 一部が確信度不足のため【人間レビューに回す】"
+            : "→ 全項目が高確信度のため【自動適用OK】"}
+        </div>
+      </div>`;
+  }
+
+  async function classify() {
+    const title = el("title").value.trim();
+    if (!title) { el("title").focus(); return; }
+    const notes = el("notes").value.trim() || undefined;
+    const btn = el("go");
+    btn.disabled = true; btn.textContent = "判定中…";
+    el("result").innerHTML = "";
+    try {
+      const res = await fetch("/api/classify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title, notes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      render(data);
+    } catch (e) {
+      el("result").innerHTML =
+        `<div class="card err">分類に失敗しました：${e.message}</div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = "分類する";
+    }
+  }
+
+  el("go").addEventListener("click", classify);
+  el("title").addEventListener("keydown", (e) => { if (e.key === "Enter") classify(); });
+  document.querySelectorAll(".ex").forEach((b) =>
+    b.addEventListener("click", () => {
+      el("title").value = b.dataset.t;
+      el("notes").value = b.dataset.n || "";
+      classify();
+    }));
+</script>
+</body>
+</html>

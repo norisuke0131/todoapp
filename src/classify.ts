@@ -4,7 +4,7 @@ import {
   PRIORITY_LABEL,
   TASK_QUESTIONS,
   type CategoryKey,
-} from "./questions.js";
+} from "./questions";
 
 /** タスクの入力。title は必須、notes は補足メモ（任意）。 */
 export interface TaskInput {

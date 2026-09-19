@@ -1,6 +1,6 @@
 import { TypeSafeClient } from "@typesafe-ai/sdk";
-import { classifyTask, type Classification, type TaskInput } from "./classify.js";
-import { createDemoClient } from "./demo-client.js";
+import { classifyTask, type Classification, type TaskInput } from "./classify";
+import { createDemoClient } from "./demo-client";
 
 interface CliArgs {
   demo: boolean;
