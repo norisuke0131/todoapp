@@ -1,21 +1,32 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { TypeSafeClient } from "@typesafe-ai/sdk";
 import { classifyTask, type Classification, type TaskInput } from "./classify";
 import { createDemoClient } from "./demo-client";
 import { findDuplicates, type DedupeResult } from "./dedupe";
+import {
+  classificationsToRows,
+  classifyBatch,
+  parseCsv,
+  tasksFromCsv,
+  toCsv,
+} from "./batch";
 
 interface CliArgs {
   demo: boolean;
   json: boolean;
   dedupe: boolean;
+  batch: string | null;
   positionals: string[];
 }
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { demo: false, json: false, dedupe: false, positionals: [] };
-  for (const a of argv) {
+  const args: CliArgs = { demo: false, json: false, dedupe: false, batch: null, positionals: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
     if (a === "--demo") args.demo = true;
     else if (a === "--json") args.json = true;
     else if (a === "--dedupe") args.dedupe = true;
+    else if (a === "--batch") args.batch = argv[++i] ?? "";
     else if (a === "--help" || a === "-h") args.positionals.push("__help__");
     else args.positionals.push(a);
   }
@@ -26,17 +37,20 @@ function usage(): string {
   return [
     "使い方: todo-classify [--demo] [--json] \"タスクのタイトル\" [\"補足メモ\"]",
     "        todo-classify --dedupe [--demo] [--json] \"新タスク\" \"既存1\" \"既存2\" ...",
+    "        todo-classify --batch <入力.csv> [出力.csv] [--demo]",
     "",
-    "  --demo     APIキー不要のオフラインモック（動作イメージ確認用）",
-    "  --json     結果をJSONで出力（他プログラムへの受け渡し用）",
-    "  --dedupe   重複検知モード：先頭を新タスク、以降を既存タスクとして意味的重複を判定",
-    "  -h         このヘルプ",
+    "  --demo         APIキー不要のオフラインモック（動作イメージ確認用）",
+    "  --json         結果をJSONで出力（他プログラムへの受け渡し用）",
+    "  --dedupe       重複検知モード：先頭を新タスク、以降を既存タスクとして意味的重複を判定",
+    "  --batch <file> CSV一括分類：title(またはタイトル/タスク)列を持つCSVを全件分類",
+    "  -h             このヘルプ",
     "",
     "本番モードは環境変数 TYPESAFE_API_KEY が必要です（.env.example 参照）。",
     "",
     "例:",
     '  npm run demo -- "明日までに業務用オリーブオイルを発注する"',
     '  npm run demo -- --dedupe "油を頼む" "オリーブオイルを発注" "トマト缶を補充"',
+    "  npm run classify -- --batch tasks.csv result.csv --demo",
   ].join("\n");
 }
 
@@ -122,12 +136,59 @@ function makeClient(demo: boolean): TypeSafeClient | null {
   return new TypeSafeClient();
 }
 
+function defaultOutPath(input: string): string {
+  return input.replace(/\.csv$/i, "") + ".classified.csv";
+}
+
+async function runBatch(client: TypeSafeClient, inputPath: string, outPath: string): Promise<void> {
+  let raw: string;
+  try {
+    raw = readFileSync(inputPath, "utf8");
+  } catch {
+    console.error(`エラー: 入力ファイルを読み込めません: ${inputPath}`);
+    process.exit(1);
+  }
+  const tasks = tasksFromCsv(parseCsv(raw));
+  if (tasks.length === 0) {
+    console.error("エラー: 分類できるタスクがありません（title/タイトル/タスク 列が必要です）。");
+    process.exit(1);
+  }
+  console.log(`${tasks.length}件を分類中…`);
+  const results = await classifyBatch(client, tasks);
+  writeFileSync(outPath, toCsv(classificationsToRows(results)), "utf8");
+  const review = results.filter((r) => r.needsHumanReview).length;
+  console.log(`完了: ${results.length}件を分類し ${outPath} に出力しました（うち要確認 ${review}件）。`);
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
-  if (args.positionals.includes("__help__") || args.positionals.length === 0) {
+  if (args.positionals.includes("__help__")) {
     console.log(usage());
-    process.exit(args.positionals.length === 0 ? 1 : 0);
+    process.exit(0);
+  }
+
+  // 一括分類モード（入力ファイルは --batch で指定、出力は任意の位置引数）
+  if (args.batch !== null) {
+    if (!args.batch) {
+      console.error("エラー: --batch には入力CSVのパスを指定してください。");
+      process.exit(1);
+    }
+    const client = makeClient(args.demo);
+    if (!client) process.exit(1);
+    const outPath = args.positionals[0] ?? defaultOutPath(args.batch);
+    try {
+      await runBatch(client, args.batch, outPath);
+    } catch (err) {
+      console.error("一括分類に失敗しました:", err instanceof Error ? err.message : err);
+      process.exit(1);
+    }
+    return;
+  }
+
+  if (args.positionals.length === 0) {
+    console.log(usage());
+    process.exit(1);
   }
 
   const client = makeClient(args.demo);
