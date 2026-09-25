@@ -118,11 +118,16 @@ npm run demo -- --dedupe "オリーブオイルを発注する" "オリーブオ
 タスク一覧のCSVを読み込み、全件を分類して結果CSVに出力します。Excelは「CSVとして保存／CSVを開く」で往復できます。
 
 - 入力CSVは先頭行がヘッダ。`title`（または `タイトル` / `タスク` / `件名`）列が必須、`notes`（または `メモ` / `備考`）列は任意
-- 出力CSVは Excel で文字化けしないよう UTF-8 BOM 付き。列：タスク／メモ／カテゴリ／確信度／優先度／期日／進捗／分割要否／要確認
+- 出力は **要確認を先頭、同条件なら優先度が高い順** に並べ替え済み（`--no-sort` で入力順のまま出力）
+- 列：タスク／メモ／カテゴリ／確信度／優先度／期日／進捗／分割要否／要確認
 
 ```sh
-# result.csv に出力（省略すると <入力>.classified.csv）
+# CSVで出力（省略すると <入力>.classified.csv）
 npm run classify -- --batch tasks.csv result.csv --demo
+
+# 出力先の拡張子を .xlsx にすると Excel ネイティブ形式で出力
+# （ヘッダ太字・列幅自動調整・オートフィルタ・要確認行を黄色でハイライト）
+npm run classify -- --batch tasks.csv result.xlsx --demo
 ```
 
 入力例（`tasks.csv`）:
@@ -134,6 +139,8 @@ title,notes
 エアコンが故障したので修理業者に連絡,
 ```
 
+> CSV出力は Excel で文字化けしないよう UTF-8 BOM 付き。xlsx出力ならBOMの心配なく、書式付きでそのまま開けます。
+
 ## 構成
 
 ```
@@ -142,7 +149,8 @@ src/
   classify.ts      systemOne 呼び出し＋確信度による振り分けロジック（本体・共有）
   duedate.ts       優先度スコアから期日を計算（JST・純粋関数）
   dedupe.ts        noul による意味的な重複検知
-  batch.ts         CSVの読み書きと一括分類（Excel往復対応）
+  batch.ts         CSVの読み書き・一括分類・優先度順ソート
+  xlsx-writer.ts   分類結果をExcelネイティブ形式(.xlsx)で書き出し（要確認行をハイライト）
   demo-client.ts   APIキー不要のデモ用モッククライアント
   cli.ts           コマンドライン入出力（分類 / --dedupe / --batch）
 api/
