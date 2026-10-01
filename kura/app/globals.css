@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* KURA デザイントークン（8章）
+   ★ RELATE（藍・罫線・Roboto Mono）とは別方向：ティール＋アンバー、水位バー、Roboto Condensed */
+:root {
+  /* 産業的なクールグレー */
+  --bg: #eef0f1; /* ページ背景（セメント） */
+  --panel: #ffffff; /* テーブル・カード */
+  --panel-alt: #f5f7f8; /* 縞・ヘッダー */
+  --line: #dbdfe2; /* 罫線 */
+  --line-hi: #b9c0c5; /* テーブルヘッダー下 */
+
+  --ink-900: #10161c; /* 見出し・本文・数値 */
+  --ink-600: #4e585f; /* 補助テキスト */
+  --ink-500: #636d74; /* 単位・小ラベル（★追加：白地 5.3:1 で AA を満たす文字色） */
+  --ink-400: #8b959c; /* 非活性・罫線的な要素（文字には使わない：白地 3.0:1） */
+
+  --primary: #0e7c86; /* 主要CTA・選択状態（ティール） */
+  --primary-d: #0a5c64;
+  --primary-50: #e2f0f1;
+
+  /* ★ 在庫状態。これ以外の色を意味づけに使わない */
+  --st-stockout: #b3352b; /* 欠品 */
+  --st-low: #c9821b; /* 発注点以下（産業安全色のアンバー） */
+  --st-normal: #3e7a5e; /* 適正 */
+  --st-excess: #6b6fa8; /* 過剰 */
+  --st-idle: #8b959c; /* 滞留（無彩色） */
+
+  /* ★追加：在庫状態を「文字」で示すときの色（すべて白地・セメント地で 4.5:1 以上） */
+  --st-stockout-ink: #b3352b;
+  --st-low-ink: #8a5a12;
+  --st-normal-ink: #2f6149;
+  --st-excess-ink: #4f5390;
+  --st-idle-ink: #636d74;
+
+  /* ★ 水位バーの構成色 */
+  --gauge-track: #e4e8ea; /* 目盛の地 */
+  --gauge-onhand: #0e7c86; /* 実在庫（塗り） */
+  --gauge-allocated: repeating-linear-gradient(
+    45deg,
+    transparent 0 4px,
+    rgba(14, 124, 134, 0.3) 4px 8px
+  ); /* 引当済（斜線） */
+  --gauge-incoming: #a9c6c9; /* 入荷予定（淡色） */
+  --gauge-reorder: #c9821b; /* 発注点ライン */
+  --gauge-safety: #b3352b; /* 安全在庫ライン */
+
+  /* 期限 */
+  --exp-expired: #b3352b;
+  --exp-near: #c9821b;
+
+  /* デモ切替バー：プロダクトのトークンとは別扱い（アプリの外側の操作パネル） */
+  --demo-bg: #151b21;
+  --demo-ink: #e9edef;
+  --demo-ink-dim: #9aa4ab;
+  --demo-line: #2a333b;
+
+  --shadow-pop: 0 4px 12px rgba(16, 22, 28, 0.12);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink-900);
+    font-family: var(--font-sans), 'Hiragino Sans', 'Yu Gothic UI', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    font-feature-settings: 'palt' 0;
+  }
+  /* A11Y-03：フォーカスリングは 2px・オフセット 2px で常に見える */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--primary-50);
+  }
+}
+
+@layer utilities {
+  /* 数値は縦長の Roboto Condensed + 等幅数字（KURA の指紋） */
+  .num {
+    font-family: var(--font-num), 'Roboto Condensed', 'Arial Narrow', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  /* 引当済の斜線。細いバーでも見えるよう、地に薄い塗りを敷いてから斜線を重ねる */
+  .hatch-allocated {
+    background-color: rgba(14, 124, 134, 0.16);
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(14, 124, 134, 0.75) 0 1.5px,
+      transparent 1.5px 4px
+    );
+  }
+  .hatch-allocated-lg {
+    background-color: rgba(14, 124, 134, 0.14);
+    background-image: repeating-linear-gradient(-45deg, rgba(14, 124, 134, 0.7) 0 2px, transparent 2px 6px);
+  }
+  /* デモ区画の境界を示す安全テープ（デモ切替バーの下端） */
+  .hazard-tape {
+    background-image: repeating-linear-gradient(-45deg, var(--st-low) 0 6px, var(--demo-bg) 6px 12px);
+  }
+}
+
+/* 8章 モーション：prefers-reduced-motion では全アニメーションを止める */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 4px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200px 0;
+  }
+  to {
+    background-position: 200px 0;
+  }
+}

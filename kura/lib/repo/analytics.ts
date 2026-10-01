@@ -16,6 +16,9 @@ export type DashboardSummary = {
   pendingVarianceStocktakes: number // 未承認の差異がある棚卸
   delayedPurchaseOrders: number
   inTransitTransfers: number
+  /** 在庫状態の分布（商品×拠点の行数）。滞留は状態とは別の軸なので別に数える */
+  rowCount: number
+  statusCounts: { stockout: number; below_reorder: number; normal: number; excess: number }
   stockValue?: number // ★ 金額は権限がなければ含めない
 }
 
@@ -31,6 +34,13 @@ export async function getDashboard(): Promise<Result<DashboardSummary>> {
     const summary: Required<DashboardSummary> = {
       scopeLabel: c.scope.allWarehouses ? '全拠点' : whNames.join('・'),
       skuCount: new Set(snaps.map((s) => s.itemId)).size,
+      rowCount: snaps.length,
+      statusCounts: {
+        stockout: snaps.filter((s) => s.status === 'stockout').length,
+        below_reorder: snaps.filter((s) => s.status === 'below_reorder').length,
+        normal: snaps.filter((s) => s.status === 'normal').length,
+        excess: snaps.filter((s) => s.status === 'excess').length,
+      },
       stockoutRisk: snaps.filter((s) => s.status === 'stockout').length,
       needsReorder: snaps.filter((s) => needsReorder(s)).length,
       expiringItems: snaps.filter((s) => (s.expiringQty ?? 0) > 0).length,

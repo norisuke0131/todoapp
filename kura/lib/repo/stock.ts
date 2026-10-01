@@ -6,6 +6,7 @@ import {
   lotBalances,
   stockedPairs,
   composeSnapshot,
+  excessThreshold,
   type SnapshotKey,
 } from '@/lib/inventory'
 import { ctx, err, ok, run } from './_context'
@@ -24,6 +25,8 @@ export type StockRow = {
   categoryName: string
   warehouseId?: string // 未指定 = 全拠点合計
   snapshot: ScopedSnapshot
+  /** 水位バーの「過剰」境界（lib/inventory の判定と同じ値） */
+  excessLine: number
 }
 
 /**
@@ -57,6 +60,7 @@ export async function listStock(opts: { warehouseId?: string } = {}): Promise<Re
           categoryName: catName.get(item.categoryId) ?? '',
           warehouseId: k.warehouseId,
           snapshot: scopeSnapshot(c.scope, composeSnapshot(index, k, c.now)),
+          excessLine: excessThreshold(item),
         },
       ]
     })
@@ -83,6 +87,7 @@ export type StockDetail = {
   total: ScopedSnapshot
   byWarehouse: (ScopedSnapshot & { warehouseName: string })[]
   byLot: LotRow[]
+  excessLine: number
 }
 
 /** 商品詳細（SC-011）：4つの在庫数・拠点別・ロット別 */
@@ -131,6 +136,7 @@ export async function getStockDetail(sku: string): Promise<Result<StockDetail>> 
       total: scopeSnapshot(c.scope, composeSnapshot(index, totalKey, c.now)),
       byWarehouse,
       byLot,
+      excessLine: excessThreshold(item),
     })
   })
 }
@@ -169,5 +175,46 @@ export async function getItemLedger(
         warehouseName: whs.get(r.txn.warehouseId) ?? '',
       })),
     )
+  })
+}
+
+export type Spotlight = {
+  sku: string
+  warehouseId: string
+  warehouseName: string
+  item: ScopedItem
+  snapshot: ScopedSnapshot
+  excessLine: number
+}
+
+/**
+ * ダッシュボードと埋め込みで見せる1商品。4つの在庫数が全部ちがう値になる商品を選ぶ。
+ * 既定は SKU-1042（東京）。見えない拠点のロールなら、引当と入荷予定がある別の商品
+ */
+export async function getSpotlight(): Promise<Result<Spotlight>> {
+  return run(() => {
+    const c = ctx()
+    const index = c.index()
+    const itemById = new Map(c.data.items.map((i) => [i.id, i]))
+    const whName = new Map(c.data.warehouses.map((w) => [w.id, w.name]))
+    const visible = stockedPairs(index).filter((k) => canSeeWarehouse(c.scope, k.warehouseId))
+    const preferred = visible.find(
+      (k) => itemById.get(k.itemId)?.sku === 'SKU-1042' && k.warehouseId === 'wh-tokyo',
+    )
+    const fallback = visible
+      .map((k) => ({ k, s: composeSnapshot(index, k, c.now) }))
+      .filter(({ s }) => s.allocated > 0 && s.incoming > 0 && s.status === 'normal')
+      .sort((a, b) => b.s.allocated - a.s.allocated)[0]?.k
+    const key = preferred ?? fallback ?? visible[0]
+    const item = key && itemById.get(key.itemId)
+    if (!key?.warehouseId || !item) return err('表示できる商品がありません')
+    return ok({
+      sku: item.sku,
+      warehouseId: key.warehouseId,
+      warehouseName: whName.get(key.warehouseId) ?? '',
+      item: scopeItem(c.scope, item),
+      snapshot: scopeSnapshot(c.scope, composeSnapshot(index, key, c.now)),
+      excessLine: excessThreshold(item),
+    })
   })
 }
