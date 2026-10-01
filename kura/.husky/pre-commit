@@ -1,0 +1,3 @@
+# KURA 配下の変更がある時だけ lint + typecheck を走らせる
+git diff --cached --name-only | grep -q '^kura/' || exit 0
+cd kura && npm run lint && npm run typecheck
