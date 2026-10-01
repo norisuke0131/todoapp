@@ -186,7 +186,8 @@ export function generateEvents(
         at: avoid(daysAgo(now, d, rng), blackouts),
         type: 'receive',
         qty: per,
-        unitCost: Math.round(item.cost * (0.95 + rng.next() * 0.1)),
+        // SKU-1042 は5章フローBの差異金額（−4本 = −¥5,200）を再現するため単価を固定
+        unitCost: item.sku === 'SKU-1042' ? item.cost : Math.round(item.cost * (0.95 + rng.next() * 0.1)),
         userId: rng.chance(0.7) ? staffOf(wh, rng) : keeperOf(rng),
         device: rng.chance(0.6) ? 'scanner' : 'mobile',
         note: '',

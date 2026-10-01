@@ -885,6 +885,10 @@ export function buildItems(rng: Rng): { items: Item[]; profiles: Map<string, Ite
           safetyStock: 40,
           orderLot: 70,
           leadTimeDays: 10,
+          packUnits: [
+            { name: 'ケース', qtyInBase: 24 },
+            { name: 'ボール', qtyInBase: 6 },
+          ],
         })
         profiles.set(item.id, { dailyRate: 4 })
       } else if (sku === 'SKU-2011') {

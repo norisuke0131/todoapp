@@ -10,6 +10,11 @@ export default [
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      // 項目スコープでキーを取り除く `const { cost: _cost, ...rest }` を許可する
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' },
+      ],
     },
   },
   {
@@ -20,7 +25,10 @@ export default [
         'error',
         {
           patterns: [
-            { group: ['@/lib/store', '@/lib/store/*'], message: 'ストアは lib/repo/ 経由で参照してください。' },
+            {
+              group: ['@/lib/store', '@/lib/store/*'],
+              message: 'ストアは lib/repo/ 経由で参照してください。',
+            },
             { group: ['@/lib/seed', '@/lib/seed/*'], message: 'シードは lib/repo/ 経由で参照してください。' },
           ],
         },
@@ -34,12 +42,25 @@ export default [
     rules: {
       'no-restricted-syntax': [
         'error',
-        { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: '現在時刻は引数で受け取ってください（INV-05）。' },
-        { selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']", message: '現在時刻は引数で受け取ってください（INV-05）。' },
+        {
+          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+          message: '現在時刻は引数で受け取ってください（INV-05）。',
+        },
+        {
+          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message: '現在時刻は引数で受け取ってください（INV-05）。',
+        },
       ],
       'no-restricted-imports': [
         'error',
-        { patterns: [{ group: ['@/lib/store*', '@/lib/repo*', 'react', 'zustand'], message: '純粋関数のみ（INV-05）。' }] },
+        {
+          patterns: [
+            {
+              group: ['@/lib/store*', '@/lib/repo*', 'react', 'zustand'],
+              message: '純粋関数のみ（INV-05）。',
+            },
+          ],
+        },
       ],
     },
   },
