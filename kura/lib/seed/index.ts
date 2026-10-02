@@ -116,7 +116,17 @@ export function generateSeed(now: string): SeedData {
 }
 
 function defaultViews(): SavedView[] {
-  const cols = ['sku', 'name', 'onHand', 'allocated', 'available', 'incoming', 'gauge', 'status']
+  const cols = [
+    'sku',
+    'name',
+    'onHand',
+    'allocated',
+    'available',
+    'incoming',
+    'gauge',
+    'state',
+    'reorderPoint',
+  ]
   return [
     {
       id: 'view-reorder',
@@ -124,7 +134,7 @@ function defaultViews(): SavedView[] {
       target: 'stock',
       ownerId: 'u-keeper-1',
       isShared: true,
-      filters: [{ field: 'status', operator: 'in', value: ['stockout', 'below_reorder'] }],
+      filters: [{ field: 'state', operator: 'in', value: ['stockout', 'below_reorder'] }],
       visibleColumns: cols,
       sort: [{ field: 'available', dir: 'asc' }],
     },
@@ -136,7 +146,7 @@ function defaultViews(): SavedView[] {
       isShared: true,
       filters: [
         { field: 'allocated', operator: 'gte', value: 1 },
-        { field: 'status', operator: 'in', value: ['below_reorder', 'stockout'] },
+        { field: 'state', operator: 'in', value: ['below_reorder', 'stockout'] },
       ],
       visibleColumns: cols,
       sort: [{ field: 'allocated', dir: 'desc' }],
