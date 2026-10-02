@@ -27,6 +27,8 @@ export type StockRow = {
   snapshot: ScopedSnapshot
   /** 水位バーの「過剰」境界（lib/inventory の判定と同じ値） */
   excessLine: number
+  /** 拠点の行だけ：その商品の主な棚番 */
+  locationCode?: string
 }
 
 /**
@@ -39,6 +41,9 @@ export async function listStock(opts: { warehouseId?: string } = {}): Promise<Re
     const index = c.index()
     const catName = new Map(c.data.categories.map((x) => [x.id, x.name]))
     const itemById = new Map(c.data.items.map((i) => [i.id, i]))
+    const locCode = new Map(c.data.locations.map((l) => [l.id, l.code]))
+    const lastLoc = new Map<string, string>()
+    for (const t of c.data.txns) if (t.locationId) lastLoc.set(`${t.itemId}|${t.warehouseId}`, t.locationId)
 
     let keys: SnapshotKey[]
     if (opts.warehouseId) {
@@ -61,6 +66,9 @@ export async function listStock(opts: { warehouseId?: string } = {}): Promise<Re
           warehouseId: k.warehouseId,
           snapshot: scopeSnapshot(c.scope, composeSnapshot(index, k, c.now)),
           excessLine: excessThreshold(item),
+          locationCode: k.warehouseId
+            ? locCode.get(lastLoc.get(`${k.itemId}|${k.warehouseId}`) ?? '')
+            : undefined,
         },
       ]
     })
@@ -148,6 +156,7 @@ export type LedgerEntry = {
   isReversal: boolean
   userName: string
   warehouseName: string
+  lotNo?: string
 }
 
 /** 在庫元帳（SC-012）：残高列で「現在庫がどの取引の積み上げか」を見せる */
@@ -164,6 +173,7 @@ export async function getItemLedger(
     if (warehouseId && !canSeeWarehouse(c.scope, warehouseId)) return err('この拠点の履歴は閲覧できません')
     const users = new Map(c.data.users.map((u) => [u.id, u.name]))
     const whs = new Map(c.data.warehouses.map((w) => [w.id, w.name]))
+    const lots = new Map(c.data.lots.map((l) => [l.id, l.lotNo]))
     const rows = ledgerOf(c.data.txns, { itemId: item.id, warehouseId }, opts.asOf)
     return ok(
       rows.map((r) => ({
@@ -173,6 +183,7 @@ export async function getItemLedger(
         isReversal: r.isReversal,
         userName: users.get(r.txn.userId) ?? r.txn.userId,
         warehouseName: whs.get(r.txn.warehouseId) ?? '',
+        lotNo: r.txn.lotId ? lots.get(r.txn.lotId) : undefined,
       })),
     )
   })

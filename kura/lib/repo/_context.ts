@@ -23,7 +23,8 @@ function indexMemoFor(store: object): Memo<SeedData, InventoryIndex> {
   return m
 }
 
-export function ctx(): Ctx {
+/** asRole：埋め込みデモのように、ロール切替バーのない画面が決まったロールで動くときに使う */
+export function ctx(opts: { asRole?: 'staff' | 'keeper' | 'admin' } = {}): Ctx {
   const stores = getStores()
   const now = nowIso()
   stores.data.getState().ensureAnchor(now)
@@ -31,7 +32,11 @@ export function ctx(): Ctx {
   const data = selectData(state)
   if (!data) throw new Error('データの初期化に失敗しました')
   const session = stores.session.getState()
-  const scope = resolveScope(session, data.users, data.warehouses)
+  const scope = resolveScope(
+    opts.asRole ? { ...session, role: opts.asRole } : session,
+    data.users,
+    data.warehouses,
+  )
   return {
     data,
     scope,

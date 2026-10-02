@@ -25,3 +25,8 @@ export type {
   ScopedStocktake,
 } from './_scope'
 export * from './ui'
+export * from './masters'
+export * from './search'
+export * from './itemMetrics'
+export * from './import'
+export * from './embed'
