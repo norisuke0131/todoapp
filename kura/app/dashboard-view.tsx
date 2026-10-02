@@ -11,7 +11,7 @@ import { StatusStrip } from '@/components/domain/StatusStrip'
 import { FourNumbers } from '@/components/gauge/FourNumbers'
 import { GaugePanel } from '@/components/gauge/GaugePanel'
 
-export default function DashboardPage() {
+export function DashboardView() {
   const dash = useRepo(getDashboard)
   const spot = useRepo(getSpotlight)
   const d = dash.data

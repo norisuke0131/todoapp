@@ -3,6 +3,7 @@ import { Suspense, type ReactNode } from 'react'
 import { Noto_Sans_JP, Roboto_Condensed } from 'next/font/google'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AppShell } from '@/components/layout/AppShell'
+import { ToastProvider } from '@/components/ui/toast'
 import './globals.css'
 
 const sans = Noto_Sans_JP({
@@ -32,9 +33,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ja" className={`${sans.variable} ${num.variable}`}>
       <body>
         <TooltipProvider delayDuration={200}>
-          <Suspense>
-            <AppShell>{children}</AppShell>
-          </Suspense>
+          <ToastProvider>
+            <Suspense>
+              <AppShell>{children}</AppShell>
+            </Suspense>
+          </ToastProvider>
         </TooltipProvider>
       </body>
     </html>

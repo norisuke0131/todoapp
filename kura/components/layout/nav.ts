@@ -8,7 +8,9 @@ import {
   Boxes,
   CalendarClock,
   ClipboardCheck,
+  FileUp,
   Gauge,
+  Handshake,
   History,
   Layers,
   Link2,
@@ -16,6 +18,7 @@ import {
   Settings,
   ShoppingCart,
   SlidersHorizontal,
+  Warehouse,
 } from 'lucide-react'
 import type { Permission } from '@/lib/repo'
 
@@ -35,7 +38,7 @@ export const NAV: NavGroup[] = [
     label: '在庫',
     items: [
       { href: '/', label: 'ダッシュボード', icon: Gauge, ready: true },
-      { href: '/stock', label: '在庫一覧', icon: Boxes, ready: false, phase: 1 },
+      { href: '/stock', label: '在庫一覧', icon: Boxes, ready: true },
       { href: '/lots', label: 'ロット', icon: Layers, ready: false, phase: 4 },
       { href: '/expiry', label: '期限アラート', icon: CalendarClock, ready: false, phase: 4 },
     ],
@@ -60,8 +63,11 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    label: '分析・設定',
+    label: 'マスタ・分析・設定',
     items: [
+      { href: '/import', label: 'CSVインポート', icon: FileUp, ready: true, requires: 'master.write' },
+      { href: '/locations', label: '拠点・ロケーション', icon: Warehouse, ready: true },
+      { href: '/partners', label: '取引先', icon: Handshake, ready: true },
       {
         href: '/reports/turnover',
         label: '分析',
@@ -83,5 +89,11 @@ export const NAV: NavGroup[] = [
 ]
 
 export function findNav(pathname: string): NavItem | undefined {
-  return NAV.flatMap((g) => g.items).find((i) => i.href === pathname)
+  const items = NAV.flatMap((g) => g.items)
+  return (
+    items.find((i) => i.href === pathname) ??
+    items
+      .filter((i) => i.href !== '/' && pathname.startsWith(i.href))
+      .sort((a, b) => b.href.length - a.href.length)[0]
+  )
 }
