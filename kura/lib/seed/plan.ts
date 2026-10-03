@@ -44,10 +44,14 @@ export const TOKYO = 'wh-tokyo'
 export const OSAKA = 'wh-osaka'
 
 export function daysAgo(now: string, days: number, rng?: Rng): string {
-  // 営業時間らしく、9〜18時台のどこかに寄せる
-  const base = Date.parse(now) - days * DAY_MS
-  const jitter = rng ? rng.int(0, 8 * 60) * 60_000 : 0
-  return new Date(Math.min(base - jitter, Date.parse(now) - 60_000)).toISOString()
+  const nowMs = Date.parse(now)
+  const base = nowMs - days * DAY_MS
+  if (!rng) return new Date(base).toISOString()
+  // 営業時間らしく、その日の日本時間 9:00〜17:59 のどこかに置く
+  const JST = 9 * 3_600_000
+  const dayStartJst = Math.floor((base + JST) / DAY_MS) * DAY_MS - JST
+  const at = dayStartJst + (9 * 60 + rng.int(0, 9 * 60 - 1)) * 60_000
+  return new Date(Math.min(at, nowMs - 60_000)).toISOString()
 }
 
 export const staffOf = (wh: string, rng: Rng) =>
@@ -152,7 +156,13 @@ export function generateEvents(
   const idle = pair.target === 'idle'
   const rate = idle ? Math.max(0.1, profile.dailyRate * 0.3) : profile.dailyRate
   // 出庫は高回転品ほど回数を多く
-  const nShips = idle ? rng.int(1, 2) : rng.int(2, 4) + Math.min(3, Math.floor(Math.log2(rate + 1)))
+  // 記事で最初に見せる SKU-1042 は、実際の倉庫らしく細かい出庫を積み重ねる
+  const nShips =
+    item.sku === 'SKU-1042'
+      ? 26
+      : idle
+        ? rng.int(1, 2)
+        : rng.int(2, 4) + Math.min(3, Math.floor(Math.log2(rate + 1)))
   const span = idle ? [HISTORY_DAYS - 5, 95] : [HISTORY_DAYS - 5, 1]
 
   let shipped = 0

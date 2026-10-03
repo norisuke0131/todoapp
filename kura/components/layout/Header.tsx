@@ -1,7 +1,7 @@
 'use client'
 // ヘッダー（52px 固定）：パンくずと、いま操作している人
 import Link from 'next/link'
-import { Menu } from 'lucide-react'
+import { Menu, Search } from 'lucide-react'
 import type { SessionInfo } from '@/lib/repo'
 import { ROLE_LABEL } from '@/lib/repo/session'
 
@@ -11,10 +11,12 @@ export function Header({
   crumbs,
   session,
   onMenu,
+  onSearch,
 }: {
   crumbs: Crumb[]
   session?: SessionInfo
   onMenu: () => void
+  onSearch: () => void
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-13 shrink-0 items-center gap-3 border-b border-line bg-panel px-4 lg:px-6">
@@ -51,6 +53,16 @@ export function Header({
           ))}
         </ol>
       </nav>
+      <button
+        type="button"
+        onClick={onSearch}
+        className="flex h-8 shrink-0 items-center gap-2 rounded border border-line-hi bg-panel-alt px-2.5 text-[12px] text-ink-500 hover:border-ink-400 hover:text-ink-900 md:w-[260px]"
+      >
+        <Search aria-hidden className="size-4" />
+        <span className="hidden flex-1 text-left md:inline">SKU・商品名・JAN・ロット</span>
+        <span className="sr-only md:hidden">検索</span>
+        <kbd className="num hidden rounded-sm border border-line px-1 text-[10px] md:inline">⌘K</kbd>
+      </button>
       {session && (
         <div className="flex shrink-0 items-center gap-2.5">
           <span className="hidden text-right sm:block">

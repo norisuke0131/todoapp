@@ -10,18 +10,35 @@ type Props = {
   inTransit?: number
   unit?: string
   className?: string
+  /** 直前の操作で動いた数字（埋め込みデモで、動いたものだけを光らせる） */
+  changed?: Partial<Record<'onHand' | 'allocated' | 'available' | 'incoming', number>>
 }
 
-export function FourNumbers({ onHand, allocated, incoming, inTransit = 0, unit = '', className }: Props) {
+export function FourNumbers({
+  onHand,
+  allocated,
+  incoming,
+  inTransit = 0,
+  unit = '',
+  className,
+  changed,
+}: Props) {
   const available = onHand - allocated
   return (
     <div className={cn('flex flex-wrap items-end gap-x-3 gap-y-3', className)}>
       <div className="flex items-end gap-x-3">
-        <Figure label="実在庫" value={onHand} unit={unit} />
+        <Figure label="実在庫" value={onHand} unit={unit} flash={changed?.onHand} />
         <Op>−</Op>
-        <Figure label="引当済" value={allocated} unit={unit} hatch />
+        <Figure label="引当済" value={allocated} unit={unit} hatch flash={changed?.allocated} />
         <Op>=</Op>
-        <Figure label="有効在庫" value={available} unit={unit} big negative={available < 0} />
+        <Figure
+          label="有効在庫"
+          value={available}
+          unit={unit}
+          big
+          negative={available < 0}
+          flash={changed?.available}
+        />
       </div>
       <div className="flex items-end gap-x-3 border-l border-line pl-3 sm:ml-1">
         <Figure
@@ -29,6 +46,7 @@ export function FourNumbers({ onHand, allocated, incoming, inTransit = 0, unit =
           value={incoming}
           unit={unit}
           sign
+          flash={changed?.incoming}
           note={inTransit > 0 ? `うち移動中 ${fmtQty(inTransit)}` : undefined}
         />
       </div>
@@ -53,6 +71,7 @@ function Figure({
   sign,
   negative,
   note,
+  flash,
 }: {
   label: string
   value: number
@@ -62,9 +81,21 @@ function Figure({
   sign?: boolean
   negative?: boolean
   note?: string
+  /** 動いた量（符号付き）。キーを変えてアニメーションをやり直す */
+  flash?: number
 }) {
   return (
-    <div className="flex flex-col">
+    <div className="relative flex flex-col">
+      {flash !== undefined && flash !== 0 && (
+        <span
+          key={`${value}-${flash}`}
+          aria-hidden
+          className="num absolute -right-1 -top-3 translate-x-full rounded-sm bg-st-low px-1 text-[11px] leading-4 text-ink-900 motion-safe:animate-[fade-in_160ms_ease-out]"
+        >
+          {flash > 0 ? '+' : '−'}
+          {Math.abs(flash)}
+        </span>
+      )}
       <span className="flex items-center gap-1.5 text-label text-ink-600">
         {hatch && <span aria-hidden className="hatch-allocated-lg inline-block size-2.5" />}
         {label}
