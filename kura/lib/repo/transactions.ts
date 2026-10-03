@@ -71,3 +71,43 @@ export async function reverseTransaction(txnId: string, note = ''): Promise<Resu
     return ok(scopeTransaction(c.scope, created))
   })
 }
+
+export type TxnRow = ScopedTransaction & {
+  isReversed: boolean
+  sku: string
+  itemName: string
+  baseUnit: string
+  userName: string
+  warehouseName: string
+  lotNo?: string
+  reasonName?: string
+}
+
+/** 一覧表示用に名前を引いた取引（SC-130）。新しい順 */
+export async function listTransactionRows(f: TxnFilter = {}): Promise<Result<TxnRow[]>> {
+  const r = await listTransactions(f)
+  if (!r.ok) return r
+  return run(() => {
+    const c = ctx()
+    const items = new Map(c.data.items.map((i) => [i.id, i]))
+    const users = new Map(c.data.users.map((u) => [u.id, u.name]))
+    const whs = new Map(c.data.warehouses.map((w) => [w.id, w.name]))
+    const lots = new Map(c.data.lots.map((l) => [l.id, l.lotNo]))
+    const reasons = new Map(c.data.reasonCodes.map((x) => [x.id, x.name]))
+    return ok(
+      r.data.map((t) => {
+        const i = items.get(t.itemId)
+        return {
+          ...t,
+          sku: i?.sku ?? '',
+          itemName: i?.name ?? '',
+          baseUnit: i?.baseUnit ?? '',
+          userName: users.get(t.userId) ?? t.userId,
+          warehouseName: t.warehouseId ? (whs.get(t.warehouseId) ?? '') : '',
+          lotNo: t.lotId ? lots.get(t.lotId) : undefined,
+          reasonName: t.reasonCodeId ? reasons.get(t.reasonCodeId) : undefined,
+        }
+      }),
+    )
+  })
+}

@@ -46,12 +46,12 @@ export const NAV: NavGroup[] = [
   {
     label: '入出庫',
     items: [
-      { href: '/receive', label: '入庫（検品）', icon: ArrowDownToLine, ready: false, phase: 2 },
-      { href: '/ship', label: '出庫（ピッキング）', icon: ArrowUpFromLine, ready: false, phase: 2 },
-      { href: '/allocations', label: '引当', icon: Link2, ready: false, phase: 2 },
-      { href: '/transfer', label: '在庫移動', icon: ArrowLeftRight, ready: false, phase: 2 },
-      { href: '/adjust', label: '在庫調整', icon: SlidersHorizontal, ready: false, phase: 2 },
-      { href: '/transactions', label: '取引履歴', icon: History, ready: false, phase: 2 },
+      { href: '/receive', label: '入庫（検品）', icon: ArrowDownToLine, ready: true },
+      { href: '/ship', label: '出庫（ピッキング）', icon: ArrowUpFromLine, ready: true },
+      { href: '/allocations', label: '引当', icon: Link2, ready: true },
+      { href: '/transfer', label: '在庫移動', icon: ArrowLeftRight, ready: true },
+      { href: '/adjust', label: '在庫調整', icon: SlidersHorizontal, ready: true },
+      { href: '/transactions', label: '取引履歴', icon: History, ready: true },
     ],
   },
   {

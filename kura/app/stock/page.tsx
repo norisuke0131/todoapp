@@ -15,6 +15,8 @@ import {
   listStock,
   listViews,
   revertBulkUpdate,
+  moveAllToLocation,
+  reverseTransaction,
   saveView,
   setTableColumns,
   setUiPrefs,
@@ -35,6 +37,7 @@ import { ViewSidebar } from '@/components/table/ViewSidebar'
 import { BulkActionBar, BulkButton } from '@/components/table/BulkActionBar'
 import { useListQuery } from '@/components/table/useListQuery'
 import { BulkEditDialog, type BulkKind } from '@/components/domain/BulkEditDialog'
+import { BulkLocationDialog } from '@/components/domain/BulkLocationDialog'
 import { EmptyState } from '@/components/domain/EmptyState'
 import { TableSkeleton } from '@/components/domain/Skeleton'
 import { DEFAULT_STOCK_COLUMNS, stockColumns } from '@/components/domain/stock-columns'
@@ -177,6 +180,17 @@ export default function StockPage() {
   const density = prefs.data?.density ?? 'standard'
   const canBulk = session.data?.permissions['master.write']
   const selectedSkus = [...new Set([...selection].map((id) => id.split('|')[0]!))]
+  // 棚番の一括変更は、拠点別の行を1拠点に揃えて選んだときだけ（全拠点合計の行には棚が無い）
+  const selectedWhs = [...new Set([...selection].map((id) => id.split('|')[1]!))]
+  const moveWh = selectedWhs.length === 1 && selectedWhs[0] !== 'all' ? selectedWhs[0] : undefined
+  const moveReason = !selection.size
+    ? undefined
+    : selectedWhs.includes('all')
+      ? '拠点別の行を選ぶと使えます（全拠点合計の行には棚がありません）'
+      : !moveWh
+        ? '1つの拠点の行だけを選ぶと使えます'
+        : undefined
+  const [moving, setMoving] = useState(false)
 
   const exportCsv = () => {
     const cols = visibleCols.filter((c) => c.id !== 'gauge')
@@ -397,10 +411,41 @@ export default function StockPage() {
           <BulkActionBar count={selection.size} onClear={() => setSelection(new Set())}>
             <BulkButton onClick={() => setBulk('category')}>カテゴリを変更</BulkButton>
             <BulkButton onClick={() => setBulk('reorderPoint')}>発注点を変更</BulkButton>
+            <BulkButton onClick={() => setMoving(true)} disabled={Boolean(moveReason)} reason={moveReason}>
+              棚番を変更
+            </BulkButton>
           </BulkActionBar>
         </section>
       </div>
 
+      <BulkLocationDialog
+        open={moving}
+        count={selection.size}
+        warehouseId={moveWh}
+        warehouseName={moveWh ? (whName.get(moveWh) ?? '') : ''}
+        onClose={() => setMoving(false)}
+        onSubmit={async (locationId) => {
+          const targets = rows.filter((r) => r.warehouseId === moveWh && selection.has(rowId(r)))
+          const r = await moveAllToLocation(
+            targets.map((t) => ({ itemId: t.item.id, warehouseId: moveWh! })),
+            locationId,
+          )
+          if (!r.ok) return r.error
+          setMoving(false)
+          setSelection(new Set())
+          toast.show({
+            message: r.data.moved
+              ? `${r.data.moved} 品目の棚を移しました`
+              : '選んだ品目は、すでにその棚にあります',
+            undo: r.data.undoTxnIds.length
+              ? async () => {
+                  for (const id of r.data.undoTxnIds) await reverseTransaction(id, '棚番の一括変更を元に戻す')
+                  toast.show({ message: '棚の移動を取り消しました' })
+                }
+              : undefined,
+          })
+        }}
+      />
       <BulkEditDialog
         kind={bulk}
         count={selectedSkus.length}

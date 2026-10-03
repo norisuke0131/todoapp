@@ -9,6 +9,8 @@ export type Masters = {
   warehouses: (Warehouse & { visible: boolean })[]
   suppliers: Partner[]
   reasonCodes: ReasonCode[]
+  /** 担当者の絞り込み用（氏名のみ） */
+  users: { id: string; name: string }[]
 }
 
 export async function getMasters(): Promise<Result<Masters>> {
@@ -19,6 +21,7 @@ export async function getMasters(): Promise<Result<Masters>> {
       warehouses: c.data.warehouses.map((w) => ({ ...w, visible: canSeeWarehouse(c.scope, w.id) })),
       suppliers: c.data.partners.filter((p) => p.kind === 'supplier'),
       reasonCodes: [...c.data.reasonCodes].sort((a, b) => a.sortOrder - b.sortOrder),
+      users: c.data.users.map((u) => ({ id: u.id, name: u.name })),
     })
   })
 }
