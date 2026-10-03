@@ -19,7 +19,7 @@ export function Header({
   onSearch: () => void
 }) {
   return (
-    <header className="sticky top-0 z-30 flex h-13 shrink-0 items-center gap-3 border-b border-line bg-panel px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-13 shrink-0 items-center gap-3 border-b border-line bg-panel px-4 lg:px-6 print:hidden">
       <button
         type="button"
         onClick={onMenu}

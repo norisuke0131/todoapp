@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <DemoBar session={session.data} />
       <div className="flex flex-1">
-        <aside className="sticky top-0 hidden h-dvh shrink-0 border-r border-line lg:block">
+        <aside className="sticky top-0 hidden h-dvh shrink-0 border-r border-line lg:block print:hidden">
           <Sidebar
             session={session.data}
             collapsed={collapsed}
