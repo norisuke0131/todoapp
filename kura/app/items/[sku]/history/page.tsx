@@ -1,7 +1,7 @@
 'use client'
 // SC-012 在庫履歴（元帳）：全トランザクションの時系列。★ 残高列で「積み上げ」を可視化する（FR-101, FR-106）
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getItemLedger, getMasters, getSession, getStockDetail, type LedgerEntry } from '@/lib/repo'
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils/cn'
 import { DataTable, type Column } from '@/components/table/DataTable'
 import { TableSkeleton } from '@/components/domain/Skeleton'
 import { EmptyState } from '@/components/domain/EmptyState'
+import { ReverseDialog, canReverse, type ReverseTarget } from '@/components/domain/ReverseDialog'
 
 export default function LedgerPage() {
   const { sku } = useParams<{ sku: string }>()
@@ -30,7 +31,10 @@ export default function LedgerPage() {
   const rows = useMemo(() => [...(ledger.data ?? [])].reverse(), [ledger.data]) // 新しい取引を上に
   const unit = detail.data?.item.baseUnit ?? ''
   const showWarehouse = !wh && session.data?.allWarehouses
+  const canUndo = session.data?.permissions['txn.reverse'].allowed
+  const [undo, setUndo] = useState<ReverseTarget>()
 
+  const d = detail.data
   const columns: Column<LedgerEntry>[] = [
     {
       id: 'at',
@@ -134,9 +138,38 @@ export default function LedgerPage() {
         )
       },
     },
+    ...(canUndo
+      ? [
+          {
+            id: 'reverse',
+            header: '取消',
+            headerLabel: '取消の操作',
+            width: 72,
+            cell: (e: LedgerEntry) =>
+              canReverse(e.txn, e.isReversed) ? (
+                <button
+                  onClick={(ev) => {
+                    ev.stopPropagation()
+                    setUndo({
+                      id: e.txn.id,
+                      type: e.txn.type,
+                      qtyBase: e.txn.qtyBase,
+                      unit,
+                      itemLabel: `${sku} ${d?.item.name ?? ''}`,
+                      occurredAt: e.txn.occurredAt,
+                      userName: e.userName,
+                    })
+                  }}
+                  className="rounded-sm px-1.5 py-0.5 text-[12px] font-bold text-primary-d hover:bg-panel-alt"
+                >
+                  取り消す
+                </button>
+              ) : null,
+          },
+        ]
+      : []),
   ]
 
-  const d = detail.data
   return (
     <>
       <Link
@@ -224,6 +257,7 @@ export default function LedgerPage() {
           />
         )}
       </section>
+      <ReverseDialog target={undo} onClose={() => setUndo(undefined)} />
     </>
   )
 }

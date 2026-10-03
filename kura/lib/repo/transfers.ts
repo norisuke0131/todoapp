@@ -57,7 +57,7 @@ export async function createTransfer(input: {
     post(c, drafts)
     const transfer: Transfer = {
       id,
-      code: `TR-${String(2500 + c.data.transfers.length + 1)}`,
+      code: `TR-${1 + Math.max(2400, ...c.data.transfers.map((t) => Number(t.code.slice(3)) || 0))}`,
       fromWarehouseId: input.fromWarehouseId,
       toWarehouseId: input.toWarehouseId,
       status: 'in_transit',
