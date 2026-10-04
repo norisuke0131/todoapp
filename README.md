@@ -47,9 +47,11 @@ npm run build
 
 このリポジトリは Vercel にそのままデプロイできます。
 
-- `public/index.html` … 静的フロント（タスク入力フォーム＋結果表示）
-- `api/classify.ts` … サーバーレス関数。`TYPESAFE_API_KEY` がVercelのEnvironment Variablesに
+- `public/index.html` … 静的フロント（タスク入力フォーム＋結果表示、CSV一括分類）
+- `api/classify.ts` … 1件分類のサーバーレス関数。`TYPESAFE_API_KEY` がVercelのEnvironment Variablesに
   設定されていれば**本物のJev判定（live）**、未設定なら**デモ判定（demo）**を返す
+- `api/batch.ts` … CSV一括分類のサーバーレス関数。ブラウザでアップロードしたCSVを分類し、
+  Excel(.xlsx)またはCSVとしてそのままダウンロードさせる
 - APIキーはサーバー側の環境変数にのみ保持し、ブラウザには一切露出しない
 
 デプロイ後、トップページのフォームからタスク文を入力すると分類結果が表示されます。
@@ -57,6 +59,15 @@ npm run build
 
 > 環境変数の追加・変更は**再デプロイして初めて反映**されます（既存デプロイには効きません）。
 > 反映後、画面下のバッジが `demo` から `live` に変わり、モデル名が実モデル名になります。
+
+### CSV一括分類（Web版）
+
+トップページ下部の「CSV一括分類」からCSVファイルを選び、出力形式（Excel / CSV）を選んで
+「分類してダウンロード」を押すと、全件を分類したファイルがそのままダウンロードされます。
+入力の列ルールはCLI版の `--batch` と同じです。
+
+> サーバーレス関数には実行時間の上限があるため、**Web版は1回あたり最大20件**までです。
+> それ以上まとめて分類したい場合は、タイムアウトのないCLI版の `--batch` を使ってください。
 
 ## CLI版の使い方
 
@@ -154,7 +165,8 @@ src/
   demo-client.ts   APIキー不要のデモ用モッククライアント
   cli.ts           コマンドライン入出力（分類 / --dedupe / --batch）
 api/
-  classify.ts      Vercel サーバーレス関数（src のロジックを共有）
+  classify.ts      Vercel サーバーレス関数（1件分類。src のロジックを共有）
+  batch.ts         Vercel サーバーレス関数（CSV一括分類→xlsx/csvをダウンロード返却）
 public/
   index.html       Web版フロント（静的）
 vercel.json        Vercel ビルド設定
