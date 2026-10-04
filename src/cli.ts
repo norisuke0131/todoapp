@@ -7,26 +7,37 @@ import {
   classificationsToRows,
   classifyBatch,
   parseCsv,
+  sortByPriority,
   tasksFromCsv,
   toCsv,
 } from "./batch";
+import { writeXlsx } from "./xlsx-writer";
 
 interface CliArgs {
   demo: boolean;
   json: boolean;
   dedupe: boolean;
   batch: string | null;
+  noSort: boolean;
   positionals: string[];
 }
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { demo: false, json: false, dedupe: false, batch: null, positionals: [] };
+  const args: CliArgs = {
+    demo: false,
+    json: false,
+    dedupe: false,
+    batch: null,
+    noSort: false,
+    positionals: [],
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--demo") args.demo = true;
     else if (a === "--json") args.json = true;
     else if (a === "--dedupe") args.dedupe = true;
     else if (a === "--batch") args.batch = argv[++i] ?? "";
+    else if (a === "--no-sort") args.noSort = true;
     else if (a === "--help" || a === "-h") args.positionals.push("__help__");
     else args.positionals.push(a);
   }
@@ -37,12 +48,14 @@ function usage(): string {
   return [
     "使い方: todo-classify [--demo] [--json] \"タスクのタイトル\" [\"補足メモ\"]",
     "        todo-classify --dedupe [--demo] [--json] \"新タスク\" \"既存1\" \"既存2\" ...",
-    "        todo-classify --batch <入力.csv> [出力.csv] [--demo]",
+    "        todo-classify --batch <入力.csv> [出力.csv|出力.xlsx] [--demo] [--no-sort]",
     "",
     "  --demo         APIキー不要のオフラインモック（動作イメージ確認用）",
     "  --json         結果をJSONで出力（他プログラムへの受け渡し用）",
     "  --dedupe       重複検知モード：先頭を新タスク、以降を既存タスクとして意味的重複を判定",
-    "  --batch <file> CSV一括分類：title(またはタイトル/タスク)列を持つCSVを全件分類",
+    "  --batch <file> 一括分類：title(またはタイトル/タスク)列を持つCSVを全件分類",
+    "                 出力パスの拡張子が .xlsx ならExcelネイティブ形式（要確認行を自動ハイライト）",
+    "  --no-sort      一括分類の出力を「要確認→優先度順」に並べ替えない（入力順のまま出力）",
     "  -h             このヘルプ",
     "",
     "本番モードは環境変数 TYPESAFE_API_KEY が必要です（.env.example 参照）。",
@@ -50,7 +63,7 @@ function usage(): string {
     "例:",
     '  npm run demo -- "明日までに業務用オリーブオイルを発注する"',
     '  npm run demo -- --dedupe "油を頼む" "オリーブオイルを発注" "トマト缶を補充"',
-    "  npm run classify -- --batch tasks.csv result.csv --demo",
+    "  npm run classify -- --batch tasks.csv result.xlsx --demo",
   ].join("\n");
 }
 
@@ -140,7 +153,12 @@ function defaultOutPath(input: string): string {
   return input.replace(/\.csv$/i, "") + ".classified.csv";
 }
 
-async function runBatch(client: TypeSafeClient, inputPath: string, outPath: string): Promise<void> {
+async function runBatch(
+  client: TypeSafeClient,
+  inputPath: string,
+  outPath: string,
+  noSort: boolean,
+): Promise<void> {
   let raw: string;
   try {
     raw = readFileSync(inputPath, "utf8");
@@ -155,9 +173,18 @@ async function runBatch(client: TypeSafeClient, inputPath: string, outPath: stri
   }
   console.log(`${tasks.length}件を分類中…`);
   const results = await classifyBatch(client, tasks);
-  writeFileSync(outPath, toCsv(classificationsToRows(results)), "utf8");
+  const ordered = noSort ? results : sortByPriority(results);
+  const rows = classificationsToRows(ordered);
+
+  if (/\.xlsx$/i.test(outPath)) {
+    await writeXlsx(rows, outPath);
+  } else {
+    writeFileSync(outPath, toCsv(rows), "utf8");
+  }
+
   const review = results.filter((r) => r.needsHumanReview).length;
-  console.log(`完了: ${results.length}件を分類し ${outPath} に出力しました（うち要確認 ${review}件）。`);
+  const order = noSort ? "" : "（要確認→優先度順に並べ替え済み）";
+  console.log(`完了: ${results.length}件を分類し ${outPath} に出力しました（うち要確認 ${review}件）。${order}`);
 }
 
 async function main(): Promise<void> {
@@ -178,7 +205,7 @@ async function main(): Promise<void> {
     if (!client) process.exit(1);
     const outPath = args.positionals[0] ?? defaultOutPath(args.batch);
     try {
-      await runBatch(client, args.batch, outPath);
+      await runBatch(client, args.batch, outPath, args.noSort);
     } catch (err) {
       console.error("一括分類に失敗しました:", err instanceof Error ? err.message : err);
       process.exit(1);

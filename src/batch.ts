@@ -116,6 +116,21 @@ export async function classifyBatch(
   return results;
 }
 
+/**
+ * 分類結果を「対応すべき順」に並べ替える（新しい配列を返す。破壊しない）。
+ *
+ * 優先順位：① 要確認（人間の判断待ち）を先頭に ② 優先度レベル降順（緊急なものが上） ③ 元の順序を保つ（安定ソート）。
+ * 「見るべきものが上にある」状態を作ることが目的で、優先度だけの単純降順にはしていない。
+ */
+export function sortByPriority(results: Classification[]): Classification[] {
+  return [...results].sort((a, b) => {
+    if (a.needsHumanReview !== b.needsHumanReview) {
+      return a.needsHumanReview ? -1 : 1;
+    }
+    return b.priority.level - a.priority.level;
+  });
+}
+
 /** 分類結果を出力用の表（レコード配列）に変換する。 */
 export function classificationsToRows(
   results: Classification[],
