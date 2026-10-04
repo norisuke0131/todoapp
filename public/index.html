@@ -4,76 +4,109 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>TypeSafe タスク自動分類</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #f7f7f8;
+    --bg: #faf5ef;
     --panel: #ffffff;
-    --text: #1a1a1e;
-    --muted: #6b6b76;
-    --border: #e3e3e8;
-    --accent: #4f46e5;
-    --accent-soft: #eef0ff;
-    --bar-bg: #ececf1;
+    --text: #2b211a;
+    --muted: #70604f;
+    --border: #e8ddd0;
+    --accent: #a03e15;
+    --accent-ink: #ffffff;
+    --accent-soft: #fbe8dc;
+    --bar-bg: #f0e6da;
     --warn: #b45309;
-    --warn-soft: #fff3e0;
-    --ok: #15803d;
+    --warn-soft: #fdf1e2;
+    --ok: #4d6333;
+    --grain: rgba(43, 33, 26, 0.035);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #16161a;
-      --panel: #1f1f26;
-      --text: #ececf1;
-      --muted: #9a9aa6;
-      --border: #33333d;
-      --accent: #8b83ff;
-      --accent-soft: #26264a;
-      --bar-bg: #2c2c36;
+      --bg: #1c1612;
+      --panel: #2a211b;
+      --text: #f3e9df;
+      --muted: #b3a090;
+      --border: #3d322a;
+      --accent: #e08a4f;
+      --accent-ink: #1c1612;
+      --accent-soft: #3a2518;
+      --bar-bg: #362c24;
       --warn: #f0b429;
       --warn-soft: #3a2f14;
-      --ok: #4ade80;
+      --ok: #8fae6c;
+      --grain: rgba(255, 244, 230, 0.045);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #16161a; --panel: #1f1f26; --text: #ececf1; --muted: #9a9aa6;
-    --border: #33333d; --accent: #8b83ff; --accent-soft: #26264a;
-    --bar-bg: #2c2c36; --warn: #f0b429; --warn-soft: #3a2f14; --ok: #4ade80;
+    --bg: #1c1612; --panel: #2a211b; --text: #f3e9df; --muted: #b3a090;
+    --border: #3d322a; --accent: #e08a4f; --accent-ink: #1c1612; --accent-soft: #3a2518;
+    --bar-bg: #362c24; --warn: #f0b429; --warn-soft: #3a2f14; --ok: #8fae6c;
+    --grain: rgba(255, 244, 230, 0.045);
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
+    margin: 0; background-color: var(--bg); color: var(--text);
+    background-image: radial-gradient(circle at 1px 1px, var(--grain) 1px, transparent 0);
+    background-size: 20px 20px;
     font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
     line-height: 1.6;
   }
-  .wrap { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 1.5rem; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 24px; font-size: .9rem; }
+  body::before {
+    content: ""; display: block; height: 5px;
+    background: linear-gradient(90deg, var(--accent), var(--ok));
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 36px 16px 64px; }
+  h1 {
+    font-family: "Fraunces", Georgia, serif; font-weight: 700;
+    font-size: 1.7rem; margin: 0 0 6px; letter-spacing: -.01em;
+  }
+  .kicker {
+    font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 8px;
+  }
+  .sub { color: var(--muted); margin: 0 0 28px; font-size: .92rem; max-width: 46ch; }
+  .sprig { width: 18px; height: 18px; vertical-align: -3px; margin-right: 6px; color: var(--ok); }
+  h2 {
+    font-family: "Fraunces", Georgia, serif; font-weight: 600; font-style: italic;
+    font-size: 1.2rem; margin: 44px 0 4px; color: var(--text);
+  }
+  .hint { color: var(--muted); font-size: .84rem; margin: 0 0 16px; }
   .card {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 14px; padding: 20px; margin-bottom: 20px;
+    border-radius: 14px; padding: 22px; margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(43, 33, 26, 0.04);
   }
   label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 6px; }
-  input, textarea {
+  input[type="text"], input:not([type]), textarea {
     width: 100%; padding: 10px 12px; border: 1px solid var(--border);
     border-radius: 9px; background: var(--bg); color: var(--text);
     font-size: 1rem; font-family: inherit; margin-bottom: 14px;
   }
   textarea { resize: vertical; min-height: 60px; }
   button {
-    background: var(--accent); color: #fff; border: 0; border-radius: 9px;
+    background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 9px;
     padding: 11px 20px; font-size: 1rem; font-weight: 600; cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
   }
+  button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(43, 33, 26, 0.12); }
+  button:active:not(:disabled) { transform: translateY(0); }
   button:disabled { opacity: .6; cursor: progress; }
   .examples { margin-top: 12px; font-size: .82rem; color: var(--muted); }
   .examples button {
     background: var(--accent-soft); color: var(--accent); font-weight: 500;
     padding: 4px 10px; font-size: .8rem; border-radius: 999px; margin: 3px 4px 0 0;
+    box-shadow: none;
   }
+  .examples button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(43, 33, 26, 0.1); }
   .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .verdict { font-size: 1.05rem; font-weight: 700; }
   .conf { color: var(--muted); font-size: .85rem; font-weight: 500; }
   .flag { color: var(--warn); font-size: .8rem; font-weight: 700; }
   .metric { margin-bottom: 16px; }
-  .metric .name { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .metric .name { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
   .bars { margin-top: 6px; }
   .barline { display: grid; grid-template-columns: 92px 1fr 44px; align-items: center; gap: 8px; font-size: .82rem; margin: 3px 0; }
   .track { height: 9px; background: var(--bar-bg); border-radius: 999px; overflow: hidden; }
@@ -83,15 +116,50 @@
   .decision.auto { background: var(--accent-soft); color: var(--ok); }
   .badge { display: inline-block; font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
   .err { color: var(--warn); font-size: .9rem; }
-  footer { color: var(--muted); font-size: .78rem; text-align: center; margin-top: 24px; }
+  footer { color: var(--muted); font-size: .78rem; text-align: center; margin-top: 28px; }
   a { color: var(--accent); }
+  .fade-in { animation: fadeUp .35s ease both; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button, .fade-in { transition: none !important; animation: none !important; }
+    button:hover:not(:disabled) { transform: none; box-shadow: none; }
+  }
+
+  /* --- CSV一括分類：ファイル選択ゾーン --- */
+  .sr-input { position: absolute; opacity: 0; width: 1px; height: 1px; overflow: hidden; }
+  .dropzone {
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    border: 1.5px dashed var(--border); border-radius: 10px; padding: 14px 16px;
+    margin-bottom: 16px; transition: border-color .12s ease, background .12s ease;
+  }
+  .dropzone:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone .dz-label { font-weight: 600; font-size: .9rem; color: var(--accent); white-space: nowrap; }
+  .dropzone .dz-file { color: var(--muted); font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* --- 出力形式ピル --- */
+  .fmt-choice { display: flex; gap: 10px; margin-bottom: 18px; }
+  .fmt-pill {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border);
+    font-size: .85rem; font-weight: 600; color: var(--muted);
+    transition: all .12s ease;
+  }
+  .fmt-pill.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .ok-msg {
+    background: var(--accent-soft); color: var(--ok); border-radius: 9px;
+    padding: 10px 14px; font-size: .88rem; font-weight: 600;
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <p class="kicker">base ｜ キッチンオペレーション</p>
   <h1>TypeSafe タスク自動分類</h1>
-  <p class="sub">タスク文を入力すると、TypeSafe（System One / Jev）が
-    <strong>カテゴリ・優先度・分割要否</strong>を型付きの判断＋確率で返します。</p>
+  <p class="sub">タスク文を書くだけで、TypeSafe（System One／Jev）がカテゴリ・優先度・分割要否を
+    型付きの判断＋確率で仕分けます。厨房の仕込み伝票のように、迷わず次の一手がわかるように。</p>
 
   <div class="card">
     <label for="title">タスクのタイトル</label>
@@ -108,6 +176,42 @@
   </div>
 
   <div id="result"></div>
+
+  <h2>
+    <svg class="sprig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+      <path d="M4 20 C4 12, 10 6, 19 4" />
+      <ellipse cx="9" cy="13" rx="3.2" ry="1.7" transform="rotate(-35 9 13)" />
+      <ellipse cx="14" cy="8" rx="3" ry="1.6" transform="rotate(-20 14 8)" />
+      <circle cx="19.5" cy="4.5" r="1.6" fill="currentColor" stroke="none" />
+    </svg>
+    CSV一括分類
+  </h2>
+  <p class="hint">タスク一覧のCSVをアップロードすると、全件を分類してExcel（またはCSV）でダウンロードできます。</p>
+  <div class="card">
+    <label for="csvFile">CSVファイル</label>
+    <label class="dropzone" for="csvFile">
+      <span class="dz-label">ファイルを選択</span>
+      <span class="dz-file" id="dzFileName">未選択</span>
+      <input class="sr-input" id="csvFile" type="file" accept=".csv,text/csv" />
+    </label>
+
+    <label>出力形式</label>
+    <div class="fmt-choice" id="fmtChoice">
+      <label class="fmt-pill active" data-fmt="xlsx">
+        <input class="sr-input" type="radio" name="fmt" value="xlsx" checked />Excel (.xlsx)
+      </label>
+      <label class="fmt-pill" data-fmt="csv">
+        <input class="sr-input" type="radio" name="fmt" value="csv" />CSV
+      </label>
+    </div>
+
+    <button id="batchGo">分類してダウンロード</button>
+    <p class="hint" style="margin:12px 0 0">
+      先頭行はヘッダ。<code>title</code>（または タイトル／タスク／件名）列が必須、
+      <code>notes</code>（または メモ／備考）列は任意。1回あたり最大20件まで。
+    </p>
+  </div>
+  <div id="batchResult"></div>
 
   <footer>
     <span class="badge" id="modeBadge">demo</span>
@@ -145,7 +249,7 @@
     const priFlag = r.priority.needsReview ? '<span class="flag">⚠ 要確認</span>' : "";
 
     el("result").innerHTML = `
-      <div class="card">
+      <div class="card fade-in">
         <div class="metric">
           <div class="name">カテゴリ</div>
           <div class="row"><span class="verdict">${r.category.label}</span>
@@ -198,7 +302,7 @@
       render(data);
     } catch (e) {
       el("result").innerHTML =
-        `<div class="card err">分類に失敗しました：${e.message}</div>`;
+        `<div class="card err fade-in">分類に失敗しました：${e.message}</div>`;
     } finally {
       btn.disabled = false; btn.textContent = "分類する";
     }
@@ -212,6 +316,68 @@
       el("notes").value = b.dataset.n || "";
       classify();
     }));
+
+  // --- CSV一括分類 ---
+  el("csvFile").addEventListener("change", () => {
+    const f = el("csvFile").files[0];
+    el("dzFileName").textContent = f ? f.name : "未選択";
+  });
+
+  document.querySelectorAll('.fmt-pill input[type="radio"]').forEach((input) =>
+    input.addEventListener("change", () => {
+      document.querySelectorAll(".fmt-pill").forEach((p) => p.classList.remove("active"));
+      input.closest(".fmt-pill").classList.add("active");
+    }));
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error ?? new Error("ファイルの読み込みに失敗しました。"));
+      reader.readAsText(file, "utf-8");
+    });
+  }
+
+  async function runBatch() {
+    const file = el("csvFile").files[0];
+    const out = el("batchResult");
+    if (!file) {
+      out.innerHTML = '<div class="card err fade-in">CSVファイルを選択してください。</div>';
+      return;
+    }
+    const format = document.querySelector('input[name="fmt"]:checked').value;
+    const btn = el("batchGo");
+    btn.disabled = true; btn.textContent = "分類中…";
+    out.innerHTML = "";
+    try {
+      const csv = await readFileAsText(file);
+      const res = await fetch("/api/batch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ csv, format }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "csv" ? "result.csv" : "result.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      out.innerHTML = `<div class="ok-msg fade-in">✓ ${a.download} をダウンロードしました。</div>`;
+    } catch (e) {
+      out.innerHTML = `<div class="card err fade-in">一括分類に失敗しました：${e.message}</div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = "分類してダウンロード";
+    }
+  }
+
+  el("batchGo").addEventListener("click", runBatch);
 </script>
 </body>
 </html>
