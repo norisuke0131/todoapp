@@ -141,6 +141,21 @@ title,notes
 
 > CSV出力は Excel で文字化けしないよう UTF-8 BOM 付き。xlsx出力ならBOMの心配なく、書式付きでそのまま開けます。
 
+
+## お客様向け問い合わせチャット（base）
+
+ホームページから埋め込めるお問い合わせチャットです。TypeSafe（スタッフ向けの分類）とは別の機能で、こちらはAPIキー不要です。
+
+- `public/chat.html` … お客様向けチャット画面（スマホ・PC対応）。ホームページからリンクするか、iframe で埋め込めます
+  ```html
+  <iframe src="/chat.html" title="base お問い合わせチャット" style="width:100%;height:640px;border:0"></iframe>
+  ```
+- `api/chat.ts` … `POST /api/chat`（`{"message": "..."}`）。300文字まで
+- `src/chat/respond.ts` … キーワードによる応答ルール（判定順は安全に関わるもの＝苦情・アレルギー・貸切を優先）
+- `src/chat/store-info.ts` … **回答の出典となる店舗情報**。空欄の項目は推測せず「店舗へ直接ご確認ください」と案内します。営業時間・住所・電話番号などを入力してください
+
+チャットの内容は保存しません。生成AIには答えさせず、店舗情報にあることだけを返します。
+
 ## 構成
 
 ```
@@ -156,7 +171,8 @@ src/
 api/
   classify.ts      Vercel サーバーレス関数（src のロジックを共有）
 public/
-  index.html       Web版フロント（静的）
+  index.html       Web版フロント（静的・スタッフ向け分類）
+  chat.html        お客様向け問い合わせチャット
 vercel.json        Vercel ビルド設定
 ```
 
