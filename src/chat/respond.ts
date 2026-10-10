@@ -15,7 +15,7 @@ export interface ChatReply {
   suggestions: string[];
 }
 
-const DEFAULT_SUGGESTIONS = ["営業時間", "予約", "アクセス", "メニュー"];
+const DEFAULT_SUGGESTIONS = ["営業時間", "ペット同伴", "予約", "アクセス", "メニュー"];
 
 const CONFIRM_AT_STORE = "こちらの情報は現在確認中です。お手数ですが店舗へ直接お問い合わせください。";
 
@@ -57,6 +57,18 @@ const RULES: Rule[] = [
       "貸切や団体のご利用は内容によって対応が異なります。店舗スタッフが詳しくご案内しますので、お問い合わせください。",
     handoff: true,
     suggestions: ["予約", "営業時間"],
+  },
+  {
+    id: "pets",
+    match: /ペット|犬|わんちゃん|ワンちゃん|ドッグ|愛犬/,
+    reply: () => fact(STORE.pets, ""),
+    suggestions: ["座席", "営業時間", "アクセス"],
+  },
+  {
+    id: "seating",
+    match: /座席|畳|座敷|掘りごたつ|テーブル席|座布団/,
+    reply: () => fact(STORE.seating, ""),
+    suggestions: ["予約", "ペット同伴"],
   },
   {
     id: "hours",
